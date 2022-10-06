@@ -39,12 +39,11 @@ Eigen::Vector3d xyz_as_vector3d(const PointT & p)
 }
 
 template<typename PointT>
-bool is_valid(const typename pcl::VoxelGridCovariance<PointT>::LeafConstPtr & leaf)
+bool has_edge(const typename pcl::VoxelGridCovariance<PointT>::LeafConstPtr & leaf)
 {
   return
-    leaf->nr_points > 10 &&
-    leaf->evals_(2) > leaf->evals_(0) * 10.0 &&
-    leaf->evals_(2) > leaf->evals_(1) * 5.0;
+    leaf->evals_(2) > leaf->evals_(0) * 6.0 &&
+    leaf->evals_(2) > leaf->evals_(1) * 3.0;
 }
 
 inline double mahalanobis(
@@ -60,7 +59,14 @@ inline Eigen::Vector3d principal(const Eigen::Matrix3d & eigenvectors)
   return eigenvectors.col(2);
 }
 
-constexpr double max_mahalanobis = 1.5;
+template<typename PointT>
+bool has_valid_covariance(
+  const typename pcl::VoxelGridCovariance<PointT>::LeafConstPtr & leaf)
+{
+  return leaf->nr_points >= 0;
+}
+
+constexpr double max_mahalanobis = 0.6;
 
 int main(int argc, char * argv[])
 {
@@ -79,8 +85,16 @@ int main(int argc, char * argv[])
 
   pcl::PointCloud<PointT>::Ptr filtered(new pcl::PointCloud<PointT>);
   for (auto p : *pcd_cloud) {
-    const auto leaf = voxels.getLeaf(p);
-    if (!is_valid<PointT>(leaf)) {
+    const pcl::VoxelGridCovariance<PointT>::LeafConstPtr leaf = voxels.getLeaf(p);
+
+    if (leaf == nullptr) {
+      continue;
+    }
+
+    if (has_valid_covariance<PointT>(leaf)) {
+    }
+
+    if (!has_edge<PointT>(leaf)) {
      continue;
     }
 

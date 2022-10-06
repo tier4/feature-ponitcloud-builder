@@ -21,12 +21,14 @@ typename pcl::PointCloud<PointT>::Ptr read_pcd(const std::string & filepath)
 template<typename PointT>
 pcl::VoxelGridCovariance<PointT> crop_into_voxels(
   const typename pcl::PointCloud<PointT>::ConstPtr & cloud,
-  const Eigen::Vector3d & voxel_size)
+  const Eigen::Vector3d & voxel_size,
+  const int min_points_per_voxel)
 {
   pcl::VoxelGridCovariance<PointT> cells;
   cells.setLeafSize(voxel_size(0), voxel_size(1), voxel_size(2));
   cells.setInputCloud(cloud);
   cells.filter(true);
+  cells.setMinPointPerVoxel(min_points_per_voxel);
   return cells;
 }
 
@@ -69,10 +71,11 @@ int main(int argc, char * argv[])
 
   using PointT = pcl::PointXYZ;
 
-  const double voxel_size = 2.0;
+  const double voxel_size = 1.0;
+  const int min_points_per_voxel = 20;
   const Eigen::Vector3d voxel_sizes(voxel_size, voxel_size, voxel_size);
   const auto pcd_cloud = read_pcd<PointT>(argv[1]);
-  auto voxels = crop_into_voxels<PointT>(pcd_cloud, voxel_sizes);
+  auto voxels = crop_into_voxels<PointT>(pcd_cloud, voxel_sizes, min_points_per_voxel);
 
   pcl::PointCloud<PointT>::Ptr filtered(new pcl::PointCloud<PointT>);
   for (auto p : *pcd_cloud) {

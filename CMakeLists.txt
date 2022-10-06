@@ -13,7 +13,7 @@ add_executable(mapping src/main.cpp)
 target_link_libraries(mapping ${PCL_LIBRARIES} Eigen3::Eigen)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+  add_compile_options(-Wall -Wextra -Wpedantic -O3)
 endif()
 
 # find dependencies

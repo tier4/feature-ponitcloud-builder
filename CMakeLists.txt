@@ -1,20 +1,20 @@
 cmake_minimum_required(VERSION 3.8)
 project(mapping)
 
+add_compile_options(-Wall -Wextra -Wpedantic -O3 -g)
+
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 find_package(PCL 1.2 REQUIRED)
+
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-add_executable(mapping src/main.cpp)
+add_executable(mapping src/main.cpp src/filter.cpp)
 
+target_include_directories(mapping PUBLIC include)
 target_link_libraries(mapping ${PCL_LIBRARIES} Eigen3::Eigen)
-
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic -O3)
-endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)

@@ -9,6 +9,8 @@
 #include <pcl/common/io.h>
 #include <pcl/point_types.h>
 
+#include "mapping/filter.hpp"
+
 template<typename PointT>
 typename pcl::PointCloud<PointT>::Ptr read_pcd(const std::string & filepath)
 {
@@ -19,20 +21,6 @@ typename pcl::PointCloud<PointT>::Ptr read_pcd(const std::string & filepath)
     throw std::invalid_argument("Couldn't read file" + filepath);
   }
   return cloud;
-}
-
-template<typename PointT>
-pcl::VoxelGridCovariance<PointT> crop_into_voxels(
-  const typename pcl::PointCloud<PointT>::ConstPtr & cloud,
-  const Eigen::Vector3d & voxel_size,
-  const int min_points_per_voxel)
-{
-  pcl::VoxelGridCovariance<PointT> cells;
-  cells.setLeafSize(voxel_size(0), voxel_size(1), voxel_size(2));
-  cells.setInputCloud(cloud);
-  cells.filter(true);
-  cells.setMinPointPerVoxel(min_points_per_voxel);
-  return cells;
 }
 
 template<typename PointT>
@@ -113,7 +101,7 @@ bool is_valid(const typename pcl::VoxelGridCovariance<PointT>::LeafConstPtr & le
 
 template<typename PointT>
 typename pcl::PointCloud<PointT>::Ptr ExtractEdge(
-  typename pcl::VoxelGridCovariance<PointT> & voxels,
+  const Filter<PointT> & voxels,
   const typename pcl::PointCloud<PointT>::Ptr & input_cloud,
   const double edge_eigenvalue_ratio,
   const double edge_neighbor_threshold)
@@ -136,7 +124,7 @@ typename pcl::PointCloud<PointT>::Ptr ExtractEdge(
 
 template<typename PointT>
 typename pcl::PointCloud<PointT>::Ptr ExtractSurface(
-  typename pcl::VoxelGridCovariance<PointT> & voxels,
+  const Filter<PointT> & voxels,
   const typename pcl::PointCloud<PointT>::Ptr & input_cloud,
   const double surface_eigenvalue_ratio,
   const double surface_neighbor_threshold)
@@ -158,6 +146,7 @@ typename pcl::PointCloud<PointT>::Ptr ExtractSurface(
 }
 
 constexpr int min_points_per_voxel = 10;
+constexpr int min_points_per_voxel_ = 0;
 
 int main(int argc, char * argv[])
 {
@@ -170,16 +159,19 @@ int main(int argc, char * argv[])
 
   const auto pcd_cloud = read_pcd<PointT>(argv[1]);
 
-  const Eigen::Vector3d voxel_sizes1(2., 2., 2.);
-  auto voxels1 = crop_into_voxels<PointT>(pcd_cloud, voxel_sizes1, min_points_per_voxel);
-  const auto edge1 = ExtractEdge(voxels1, pcd_cloud, 10.0, 0.2);
-  const auto surface1 = ExtractSurface(voxels1, pcd_cloud, 0.1, 1.0);
+  const Eigen::Vector3f voxel_sizes1(2., 2., 2.);
 
-  const Eigen::Vector3d voxel_sizes2(1.0, 1.0, 1.0);
-  auto voxels2 = crop_into_voxels<PointT>(pcd_cloud, voxel_sizes2, min_points_per_voxel);
-  const auto edge2 = ExtractEdge(voxels2, edge1, 5.0, 0.1);
-  const auto surface2 = ExtractSurface(voxels2, surface1, 0.1, 1.0);
+  const Filter<PointT> filter1(pcd_cloud, voxel_sizes1, min_points_per_voxel_);
+  const auto edge1 = ExtractEdge(filter1, pcd_cloud, 10.0, 0.2);
+  const auto surface1 = ExtractSurface(filter1, pcd_cloud, 0.1, 1.0);
 
+  // const Eigen::Vector3f voxel_sizes2(1.0, 1.0, 1.0);
+  // const Filter<PointT> filter2(pcd_cloud, voxel_sizes2, min_points_per_voxel_);
+  // const auto edge2 = ExtractEdge(filter2, edge1, 5.0, 0.1);
+  // const auto surface2 = ExtractSurface(filter2, surface1, 0.1, 1.0);
+
+  // std::cout << "edge1->size() == " << edge1->size() << std::endl;
+  // std::cout << "surface1->size() == " << surface1->size() << std::endl;
   pcl::io::savePCDFile<PointT>(std::string{"edge.pcd"}, *edge1, true);
   pcl::io::savePCDFile<PointT>(std::string{"surface.pcd"}, *surface1, true);
 

@@ -1,6 +1,5 @@
 #include <Eigen/Core>
 
-#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -158,12 +157,7 @@ typename pcl::PointCloud<PointT>::Ptr ExtractSurface(
   return surface;
 }
 
-constexpr double voxel_size = 1.0;
 constexpr int min_points_per_voxel = 10;
-constexpr double edge_neighbor_threshold = 0.1;
-constexpr double surface_neighbor_threshold = 1.0;
-constexpr double edge_eigenvalue_ratio = 10.0;
-constexpr double surface_eigenvalue_ratio = 0.1;
 
 int main(int argc, char * argv[])
 {
@@ -172,40 +166,22 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  using std::chrono::duration_cast;
-  using std::chrono::high_resolution_clock;
-  using std::chrono::milliseconds;
   using PointT = pcl::PointXYZ;
-
-  const Eigen::Vector3d voxel_sizes(voxel_size, voxel_size, voxel_size);
 
   const auto pcd_cloud = read_pcd<PointT>(argv[1]);
 
-  const auto start_crop = high_resolution_clock::now();
+  const Eigen::Vector3d voxel_sizes1(2., 2., 2.);
+  auto voxels1 = crop_into_voxels<PointT>(pcd_cloud, voxel_sizes1, min_points_per_voxel);
+  const auto edge1 = ExtractEdge(voxels1, pcd_cloud, 10.0, 0.2);
+  const auto surface1 = ExtractSurface(voxels1, pcd_cloud, 0.1, 1.0);
 
-  auto voxels = crop_into_voxels<PointT>(pcd_cloud, voxel_sizes, min_points_per_voxel);
+  const Eigen::Vector3d voxel_sizes2(1.0, 1.0, 1.0);
+  auto voxels2 = crop_into_voxels<PointT>(pcd_cloud, voxel_sizes2, min_points_per_voxel);
+  const auto edge2 = ExtractEdge(voxels2, edge1, 5.0, 0.1);
+  const auto surface2 = ExtractSurface(voxels2, surface1, 0.1, 1.0);
 
-  const auto stop_crop = high_resolution_clock::now();
-  const auto start_mapping = high_resolution_clock::now();
-
-  const auto edge = ExtractEdge(
-    voxels, pcd_cloud,
-    edge_eigenvalue_ratio,
-    edge_neighbor_threshold);
-  const auto surface = ExtractSurface(
-    voxels, pcd_cloud,
-    surface_eigenvalue_ratio,
-    surface_neighbor_threshold);
-
-  const auto stop_mapping = high_resolution_clock::now();
-  const auto duration_crop = duration_cast<milliseconds>(stop_crop - start_crop);
-  const auto duration_mapping = duration_cast<milliseconds>(stop_mapping - start_mapping);
-
-  std::cout << "voxel creation : " << duration_crop.count() << " milliseconds" << std::endl;
-  std::cout << "map creation   : " << duration_mapping.count() << " milliseconds" << std::endl;
-
-  pcl::io::savePCDFile<PointT>(std::string{"edge.pcd"}, *edge, true);
-  pcl::io::savePCDFile<PointT>(std::string{"surface.pcd"}, *surface, true);
+  pcl::io::savePCDFile<PointT>(std::string{"edge.pcd"}, *edge1, true);
+  pcl::io::savePCDFile<PointT>(std::string{"surface.pcd"}, *surface1, true);
 
   return 0;
 }

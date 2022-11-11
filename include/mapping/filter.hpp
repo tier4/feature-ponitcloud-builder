@@ -110,15 +110,9 @@ LeafConstPtr getLeaf(const PointT & p) const {
 
 Filter(
   const typename pcl::PointCloud<PointT>::ConstPtr input_,
-  const Eigen::Vector3f leaf_size,
+  const Eigen::Vector3f & leaf_size,
   const int min_points_per_voxel_)
-  : inverse_leaf_size_(
-      Eigen::Array4f(
-        1. / leaf_size(0),
-        1. / leaf_size(1),
-        1. / leaf_size(2),
-        1.)
-) {
+  : inverse_leaf_size_(1. / leaf_size.array()) {
   std::vector<int> voxel_centroids_leaf_indices_;
 
   // Has the input dataset been set already?
@@ -150,20 +144,19 @@ Filter(
     return;
   }
 
-  Eigen::Vector4i max_b_;
-  Eigen::Vector4i div_b_;
+  Eigen::Vector3i max_b_;
+  Eigen::Vector3i div_b_;
 
   const auto [min_b, max_b] = getMinMaxBoundingBox(
-    min_p, max_p, inverse_leaf_size_.head(3));
-  min_b_.head(3) = min_b;
-  max_b_.head(3) = max_b;
+    min_p, max_p, inverse_leaf_size_);
+  min_b_ = min_b;
+  max_b_ = max_b;
 
   // Compute the number of divisions needed along all axis
-  div_b_ = max_b_ - min_b_ + Eigen::Vector4i::Ones();
-  div_b_[3] = 0;
+  div_b_ = max_b_ - min_b_ + Eigen::Vector3i::Ones();
 
   // Set up the division multiplier
-  divb_mul_ = Eigen::Vector4i(1, div_b_[0], div_b_[0] * div_b_[1], 0);
+  divb_mul_ = Eigen::Vector3i(1, div_b_[0], div_b_[0] * div_b_[1]);
 
   int centroid_size = 4;
 
@@ -189,27 +182,28 @@ Filter(
       }
     }
 
-    // Compute the centroid leaf index
-    const Eigen::Vector4i ijk =
-        Eigen::floor(point.getArray4fMap() * inverse_leaf_size_.array())
-            .template cast<int>();
-    // divb_mul_[3] = 0 by assignment
-    int idx = (ijk - min_b_).dot(divb_mul_);
+    const Eigen::Vector3f pt3f = point.getVector3fMap();
+    const Eigen::Vector3d pt3d = pt3f.template cast<double>();
 
-    Leaf& leaf = leaves_[idx];
+    // Compute the centroid leaf index
+    const Eigen::Vector3i ijk =
+        Eigen::floor(pt3f.array() * inverse_leaf_size_.array())
+            .template cast<int>();
+    const int idx = (ijk - min_b_).dot(divb_mul_);
+
+    Leaf & leaf = leaves_[idx];
     if (leaf.nr_points == 0) {
       leaf.centroid.resize(centroid_size);
       leaf.centroid.setZero();
     }
 
-    const Eigen::Vector3d pt3d = point.getVector3fMap().template cast<double>();
     // Accumulate point sum for centroid calculation
     leaf.mean_ += pt3d;
     // Accumulate x*xT for single pass covariance calculation
     leaf.cov_ += pt3d * pt3d.transpose();
 
     // Do we need to process all the fields?
-    leaf.centroid.template head<3>() += point.getVector3fMap();
+    leaf.centroid.template head<3>() += pt3f;
     ++leaf.nr_points;
   }
 
@@ -301,10 +295,10 @@ Filter(
 }
 
  private:
-  const Eigen::Array4f inverse_leaf_size_;
+  const Eigen::Vector3f inverse_leaf_size_;
   std::map<std::size_t, Leaf> leaves_;
-  Eigen::Vector4i min_b_;
-  Eigen::Vector4i divb_mul_;
+  Eigen::Vector3i min_b_;
+  Eigen::Vector3i divb_mul_;
 };
 
 #endif  // INCLUDE_MAPPING_FILTER_HPP_

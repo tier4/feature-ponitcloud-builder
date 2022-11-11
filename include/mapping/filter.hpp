@@ -56,17 +56,19 @@
 
 
 template<typename PointT>
-std::tuple<Eigen::Vector3f, Eigen::Vector3f> getMinMax3D(
+std::tuple<Eigen::Vector3d, Eigen::Vector3d> getMinMax3D(
   const typename pcl::PointCloud<PointT> & input) {
   Eigen::Vector4f min_p, max_p;
   pcl::getMinMax3D<PointT>(input, min_p, max_p);
-  return std::make_tuple(min_p.head(3), max_p.head(3));
+  return std::make_tuple(
+    min_p.head(3).template cast<double>(),
+    max_p.head(3).template cast<double>());
 }
 
 std::tuple<Eigen::Vector3i, Eigen::Vector3i> getMinMaxBoundingBox(
-  const Eigen::Vector3f & min_p,
-  const Eigen::Vector3f & max_p,
-  const Eigen::Vector3f & inverse_leaf_size) {
+  const Eigen::Vector3d & min_p,
+  const Eigen::Vector3d & max_p,
+  const Eigen::Vector3d & inverse_leaf_size) {
   Eigen::Vector3i min_b, max_b;
   // Compute the minimum and maximum bounding box values
   min_b(0) = static_cast<int>(std::floor(min_p(0) * inverse_leaf_size(0)));
@@ -91,7 +93,6 @@ LeafConstPtr getLeaf(const PointT & p) const {
   const int ijk1 = static_cast<int>(std::floor(cy) - min_b_(1));
   const int ijk2 = static_cast<int>(std::floor(cz) - min_b_(2));
 
-  // Compute the centroid leaf index
   const int idx =
     ijk0 * divb_mul_(0) +
     ijk1 * divb_mul_(1) +
@@ -108,7 +109,7 @@ LeafConstPtr getLeaf(const PointT & p) const {
 
 Filter(
   const typename pcl::PointCloud<PointT>::ConstPtr input_,
-  const Eigen::Vector3f & leaf_size,
+  const Eigen::Vector3d & leaf_size,
   const int min_points_per_voxel_)
   : inverse_leaf_size_(1. / leaf_size.array()) {
   // Has the input dataset been set already?
@@ -156,20 +157,16 @@ Filter(
       }
     }
 
-    const Eigen::Vector3f pt3f = point.getVector3fMap();
-    const Eigen::Vector3d pt3d = pt3f.template cast<double>();
+    const Eigen::Vector3d pt3d = point.getVector3fMap().template cast<double>();
 
-    // Compute the centroid leaf index
     const Eigen::Vector3i ijk =
-        Eigen::floor(pt3f.array() * inverse_leaf_size_.array())
+        Eigen::floor(pt3d.array() * inverse_leaf_size_.array())
             .template cast<int>();
     const int idx = (ijk - min_b_).dot(divb_mul_);
 
     Leaf & leaf = leaves_[idx];
 
-    // Accumulate point sum for centroid calculation
     leaf.mean_ += pt3d;
-    // Accumulate x*xT for single pass covariance calculation
     leaf.cov_ += pt3d * pt3d.transpose();
 
     ++leaf.nr_points;
@@ -242,7 +239,7 @@ Filter(
 }
 
  private:
-  const Eigen::Vector3f inverse_leaf_size_;
+  const Eigen::Vector3d inverse_leaf_size_;
   std::map<std::size_t, Leaf> leaves_;
   Eigen::Vector3i min_b_;
   Eigen::Vector3i divb_mul_;

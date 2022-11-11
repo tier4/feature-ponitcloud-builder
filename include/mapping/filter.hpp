@@ -51,7 +51,16 @@
 
 #include <limits>
 #include <map>
+#include <tuple>
 #include <vector>
+
+template<typename PointT>
+std::tuple<Eigen::Vector3f, Eigen::Vector3f> getMinMax3D(
+    const typename pcl::PointCloud<PointT> & input) {
+  Eigen::Vector4f min_p, max_p;
+  pcl::getMinMax3D<PointT>(input, min_p, max_p);
+  return std::make_tuple(min_p.head(3), max_p.head(3));
+}
 
 template<typename PointT>
 class Filter {
@@ -106,8 +115,7 @@ Filter(
   output.height = 1;        // downsampling breaks the organized structure
   output.is_dense = true;   // we filter out invalid points
 
-  Eigen::Vector4f min_p, max_p;
-  pcl::getMinMax3D<PointT> (*input_, min_p, max_p);
+  const auto [min_p, max_p] = getMinMax3D<PointT>(*input_);
 
   // Check that the leaf size is not too small, given the size of the data
 
@@ -115,9 +123,9 @@ Filter(
   const double ay = (max_p[1] - min_p[1]) * inverse_leaf_size_[1];
   const double az = (max_p[2] - min_p[2]) * inverse_leaf_size_[2];
 
-  const std::int64_t dx = static_cast<std::int64_t>(ax)+1;
-  const std::int64_t dy = static_cast<std::int64_t>(ay)+1;
-  const std::int64_t dz = static_cast<std::int64_t>(az)+1;
+  const std::int64_t dx = static_cast<std::int64_t>(ax) + 1;
+  const std::int64_t dy = static_cast<std::int64_t>(ay) + 1;
+  const std::int64_t dz = static_cast<std::int64_t>(az) + 1;
 
   if ((dx*dy*dz) > std::numeric_limits<std::int32_t>::max()) {
     std::cerr

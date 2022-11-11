@@ -11,7 +11,7 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-add_executable(mapping src/main.cpp src/filter.cpp)
+add_executable(mapping src/main.cpp)
 
 target_include_directories(mapping PUBLIC include)
 target_link_libraries(mapping ${PCL_LIBRARIES} Eigen3::Eigen)

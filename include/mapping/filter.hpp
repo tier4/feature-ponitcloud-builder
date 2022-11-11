@@ -80,13 +80,9 @@ Filter(
   const typename pcl::PointCloud<PointT>::ConstPtr input_,
   const Eigen::Vector3f leaf_size,
   const int min_points_per_voxel_)
+  : inverse_leaf_size_(
+      Eigen::Array4f(1. / leaf_size(0), 1. / leaf_size(1), 1. / leaf_size(2), 1.))
 {
-  inverse_leaf_size_ = Eigen::Array4f(
-    1. / leaf_size[0],
-    1. / leaf_size[1],
-    1. / leaf_size[2],
-    1.
-  );
   std::vector<int> voxel_centroids_leaf_indices_;
 
   typename pcl::PointCloud<PointT> output;
@@ -231,7 +227,9 @@ Filter(
     Eigen::Matrix3d eigen_val = eigensolver.eigenvalues ().asDiagonal ();
     leaf.evecs_ = eigensolver.eigenvectors ();
 
-    if (eigen_val (0, 0) < -Eigen::NumTraits<double>::dummy_precision () || eigen_val (1, 1) < -Eigen::NumTraits<double>::dummy_precision () || eigen_val (2, 2) <= 0)
+    if (eigen_val (0, 0) < -Eigen::NumTraits<double>::dummy_precision () ||
+        eigen_val (1, 1) < -Eigen::NumTraits<double>::dummy_precision () ||
+        eigen_val (2, 2) <= 0)
     {
       // PCL_WARN ("[VoxelGridCovariance::applyFilter] Invalid eigen value! (%g, %g, %g)\n", eigen_val (0, 0), eigen_val (1, 1), eigen_val (2, 2));
       assert(false);
@@ -269,7 +267,7 @@ Filter(
 }
 
 private:
-  Eigen::Array4f inverse_leaf_size_;
+  const Eigen::Array4f inverse_leaf_size_;
   std::map<std::size_t, Leaf> leaves_;
   Eigen::Vector4i min_b_;
   Eigen::Vector4i divb_mul_;

@@ -62,6 +62,21 @@ std::tuple<Eigen::Vector3f, Eigen::Vector3f> getMinMax3D(
   return std::make_tuple(min_p.head(3), max_p.head(3));
 }
 
+std::tuple<Eigen::Vector3i, Eigen::Vector3i> getMinMaxBoundingBox(
+  const Eigen::Vector3f & min_p,
+  const Eigen::Vector3f & max_p,
+  const Eigen::Vector3f & inverse_leaf_size) {
+  Eigen::Vector3i min_b, max_b;
+  // Compute the minimum and maximum bounding box values
+  min_b(0) = static_cast<int>(std::floor(min_p(0) * inverse_leaf_size(0)));
+  max_b(0) = static_cast<int>(std::floor(max_p(0) * inverse_leaf_size(0)));
+  min_b(1) = static_cast<int>(std::floor(min_p(1) * inverse_leaf_size(1)));
+  max_b(1) = static_cast<int>(std::floor(max_p(1) * inverse_leaf_size(1)));
+  min_b(2) = static_cast<int>(std::floor(min_p(2) * inverse_leaf_size(2)));
+  max_b(2) = static_cast<int>(std::floor(max_p(2) * inverse_leaf_size(2)));
+  return std::make_tuple(min_b, max_b);
+}
+
 template<typename PointT>
 class Filter {
  public:
@@ -106,14 +121,8 @@ Filter(
 ) {
   std::vector<int> voxel_centroids_leaf_indices_;
 
-  typename pcl::PointCloud<PointT> output;
-
   // Has the input dataset been set already?
   assert(!input_ && "Input point cloud is empty!");
-
-  // Copy the header (and thus the frame_id) + allocate enough space for points
-  output.height = 1;        // downsampling breaks the organized structure
-  output.is_dense = true;   // we filter out invalid points
 
   const auto [min_p, max_p] = getMinMax3D<PointT>(*input_);
 
@@ -127,6 +136,11 @@ Filter(
   const std::int64_t dy = static_cast<std::int64_t>(ay) + 1;
   const std::int64_t dz = static_cast<std::int64_t>(az) + 1;
 
+  // Copy the header (and thus the frame_id) + allocate enough space for points
+  typename pcl::PointCloud<PointT> output;
+  output.height = 1;        // downsampling breaks the organized structure
+  output.is_dense = true;   // we filter out invalid points
+
   if ((dx*dy*dz) > std::numeric_limits<std::int32_t>::max()) {
     std::cerr
       << "Leaf size is too small for the input dataset. "
@@ -138,13 +152,11 @@ Filter(
 
   Eigen::Vector4i max_b_;
   Eigen::Vector4i div_b_;
-  // Compute the minimum and maximum bounding box values
-  min_b_[0] = static_cast<int>(std::floor(min_p[0] * inverse_leaf_size_[0]));
-  max_b_[0] = static_cast<int>(std::floor(max_p[0] * inverse_leaf_size_[0]));
-  min_b_[1] = static_cast<int>(std::floor(min_p[1] * inverse_leaf_size_[1]));
-  max_b_[1] = static_cast<int>(std::floor(max_p[1] * inverse_leaf_size_[1]));
-  min_b_[2] = static_cast<int>(std::floor(min_p[2] * inverse_leaf_size_[2]));
-  max_b_[2] = static_cast<int>(std::floor(max_p[2] * inverse_leaf_size_[2]));
+
+  const auto [min_b, max_b] = getMinMaxBoundingBox(
+    min_p, max_p, inverse_leaf_size_.head(3));
+  min_b_.head(3) = min_b;
+  max_b_.head(3) = max_b;
 
   // Compute the number of divisions needed along all axis
   div_b_ = max_b_ - min_b_ + Eigen::Vector4i::Ones();

@@ -38,14 +38,11 @@
 #ifndef INCLUDE_MAPPING_FILTER_HPP_
 #define INCLUDE_MAPPING_FILTER_HPP_
 
-#include "mapping/filter.hpp"
-
 #include <pcl/common/point_tests.h>
 #include <pcl/common/common.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/point_types.h>
 #include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/filters/voxel_grid_covariance.h>
 
 #include <Eigen/Eigenvalues>
 
@@ -54,9 +51,13 @@
 #include <tuple>
 #include <vector>
 
+#include "mapping/filter.hpp"
+#include "mapping/leaf.hpp"
+
+
 template<typename PointT>
 std::tuple<Eigen::Vector3f, Eigen::Vector3f> getMinMax3D(
-    const typename pcl::PointCloud<PointT> & input) {
+  const typename pcl::PointCloud<PointT> & input) {
   Eigen::Vector4f min_p, max_p;
   pcl::getMinMax3D<PointT>(input, min_p, max_p);
   return std::make_tuple(min_p.head(3), max_p.head(3));
@@ -80,9 +81,6 @@ std::tuple<Eigen::Vector3i, Eigen::Vector3i> getMinMaxBoundingBox(
 template<typename PointT>
 class Filter {
  public:
-using Leaf = typename pcl::VoxelGridCovariance<PointT>::Leaf;
-using LeafConstPtr = typename pcl::VoxelGridCovariance<PointT>::LeafConstPtr;
-
 LeafConstPtr getLeaf(const PointT & p) const {
   // Generate index associated with p
   const double cx = p.x * inverse_leaf_size_(0);
@@ -113,7 +111,6 @@ Filter(
   const Eigen::Vector3f & leaf_size,
   const int min_points_per_voxel_)
   : inverse_leaf_size_(1. / leaf_size.array()) {
-
   // Has the input dataset been set already?
   assert(!input_ && "Input point cloud is empty!");
 

@@ -46,6 +46,7 @@
 #include <string>
 
 #include "mapping/filter.hpp"
+#include "mapping/leaf.hpp"
 
 
 template<typename PointT>
@@ -100,8 +101,7 @@ inline double point_plane_distance(
 }
 
 template<typename PointT>
-bool has_valid_covariance(
-  const typename pcl::VoxelGridCovariance<PointT>::LeafConstPtr & leaf) {
+bool has_valid_covariance(const LeafConstPtr & leaf) {
   return leaf->nr_points >= 0;
 }
 
@@ -112,7 +112,7 @@ Eigen::Vector3d surface_normal(const Eigen::Matrix3d & eigenvectors) {
 
 template<typename PointT>
 double point_plane_distance(
-  const typename pcl::VoxelGridCovariance<PointT>::LeafConstPtr & leaf,
+  const LeafConstPtr & leaf,
   const pcl::PointXYZ & p) {
   const Eigen::Vector3d d = xyz_as_vector3d(p) - leaf->mean_;
   return point_plane_distance(surface_normal(leaf->evecs_), d);
@@ -120,15 +120,14 @@ double point_plane_distance(
 
 template<typename PointT>
 double edge_point_distance(
-  const typename pcl::VoxelGridCovariance<PointT>::LeafConstPtr & leaf,
+  const LeafConstPtr & leaf,
   const pcl::PointXYZ & p) {
   const Eigen::Vector3d diff = xyz_as_vector3d(p) - leaf->mean_;
   return mahalanobis(leaf->icov_, principal(leaf->evecs_), diff);
 }
 
 template<typename PointT>
-bool is_valid(
-  const typename pcl::VoxelGridCovariance<PointT>::LeafConstPtr & leaf) {
+bool is_valid(const LeafConstPtr & leaf) {
   return leaf != nullptr && has_valid_covariance<PointT>(leaf);
 }
 

@@ -88,13 +88,7 @@ Filter(
   typename pcl::PointCloud<PointT> output;
 
   // Has the input dataset been set already?
-  if (!input_)
-  {
-    // PCL_WARN ("[pcl::%s::applyFilter] No input dataset given!\n", getClassName ().c_str ());
-    output.width = output.height = 0;
-    output.clear ();
-    return;
-  }
+  assert(!input_ && "Input point cloud is empty!");
 
   // Copy the header (and thus the frame_id) + allocate enough space for points
   output.height = 1;                          // downsampling breaks the organized structure

@@ -166,18 +166,12 @@ Filter(
     const int idx = (ijk - min_b_).dot(divb_mul_);
 
     Leaf & leaf = leaves_[idx];
-    if (leaf.nr_points == 0) {
-      leaf.centroid.resize(centroid_size);
-      leaf.centroid.setZero();
-    }
 
     // Accumulate point sum for centroid calculation
     leaf.mean_ += pt3d;
     // Accumulate x*xT for single pass covariance calculation
     leaf.cov_ += pt3d * pt3d.transpose();
 
-    // Do we need to process all the fields?
-    leaf.centroid.template head<3>() += pt3f;
     ++leaf.nr_points;
   }
 
@@ -188,11 +182,8 @@ Filter(
   // to a set fraction of the max eigen value.
 
   for (auto it = leaves_.begin(); it != leaves_.end(); ++it) {
-    // Normalize the centroid
     Leaf & leaf = it->second;
 
-    // Normalize the centroid
-    leaf.centroid /= static_cast<float>(leaf.nr_points);
     // Point sum used for single pass covariance calculation
     const Eigen::Vector3d pt_sum = leaf.mean_;
     // Normalize mean

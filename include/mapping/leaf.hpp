@@ -51,7 +51,6 @@ struct Leaf {
   int nr_points;
 
   Eigen::Vector3d mean_;
-  Eigen::VectorXf centroid;
   Eigen::Matrix3d cov_;
   Eigen::Matrix3d icov_;
   Eigen::Matrix3d evecs_;

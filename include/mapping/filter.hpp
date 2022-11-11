@@ -113,7 +113,6 @@ Filter(
   const Eigen::Vector3f & leaf_size,
   const int min_points_per_voxel_)
   : inverse_leaf_size_(1. / leaf_size.array()) {
-  std::vector<int> voxel_centroids_leaf_indices_;
 
   // Has the input dataset been set already?
   assert(!input_ && "Input point cloud is empty!");
@@ -121,28 +120,6 @@ Filter(
   const auto [min_p, max_p] = getMinMax3D<PointT>(*input_);
 
   // Check that the leaf size is not too small, given the size of the data
-
-  const double ax = (max_p[0] - min_p[0]) * inverse_leaf_size_[0];
-  const double ay = (max_p[1] - min_p[1]) * inverse_leaf_size_[1];
-  const double az = (max_p[2] - min_p[2]) * inverse_leaf_size_[2];
-
-  const std::int64_t dx = static_cast<std::int64_t>(ax) + 1;
-  const std::int64_t dy = static_cast<std::int64_t>(ay) + 1;
-  const std::int64_t dz = static_cast<std::int64_t>(az) + 1;
-
-  // Copy the header (and thus the frame_id) + allocate enough space for points
-  typename pcl::PointCloud<PointT> output;
-  output.height = 1;        // downsampling breaks the organized structure
-  output.is_dense = true;   // we filter out invalid points
-
-  if ((dx*dy*dz) > std::numeric_limits<std::int32_t>::max()) {
-    std::cerr
-      << "Leaf size is too small for the input dataset. "
-      << "Integer indices would overflow."
-      << std::endl;
-    output.clear();
-    return;
-  }
 
   Eigen::Vector3i max_b_;
   Eigen::Vector3i div_b_;
@@ -207,11 +184,6 @@ Filter(
     ++leaf.nr_points;
   }
 
-  // Second pass:
-  // go over all leaves and compute centroids and covariance matrices
-  output.reserve(leaves_.size());
-  voxel_centroids_leaf_indices_.reserve(leaves_.size());
-
   // Eigen values and vectors calculated to prevent near singluar matrices
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver;
 
@@ -230,21 +202,12 @@ Filter(
     leaf.mean_ /= leaf.nr_points;
 
     // If the voxel contains sufficient points, its covariance is calculated and
-    // is added to the voxel centroids and output clouds.
+    // is added to the voxel centroids.
     // Points with less than the minimum points will have a can not be
     // accurately approximated using a normal distribution.
     if (leaf.nr_points < min_points_per_voxel_) {
       continue;
     }
-
-    output.push_back(PointT());
-
-    output.back().x = leaf.centroid[0];
-    output.back().y = leaf.centroid[1];
-    output.back().z = leaf.centroid[2];
-
-    // Stores the voxel indice for fast access searching
-    voxel_centroids_leaf_indices_.push_back(static_cast<int>(it->first));
 
     // Single pass covariance calculation
     leaf.cov_ =
@@ -263,7 +226,6 @@ Filter(
                 << "," << eigen_val(1, 1)
                 << "," << eigen_val(2, 2)
                 << ")" << std::endl;
-      assert(false);
       leaf.nr_points = -1;
       continue;
     }
@@ -286,12 +248,9 @@ Filter(
     leaf.icov_ = leaf.cov_.inverse();
     if (leaf.icov_.maxCoeff() == std::numeric_limits<float>::infinity() ||
         leaf.icov_.minCoeff() == -std::numeric_limits<float>::infinity()) {
-      assert(false);
       leaf.nr_points = -1;
     }
   }
-
-  output.width = output.size();
 }
 
  private:

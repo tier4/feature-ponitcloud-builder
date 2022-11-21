@@ -188,21 +188,16 @@ int main(int argc, char * argv[]) {
 
   const auto pcd_cloud = read_pcd<PointT>(argv[1]);
 
-  const Eigen::Vector3d voxel_sizes1(2., 2., 2.);
+  const Eigen::Vector3d voxel_sizes(0.3, 0.3, 0.3);
 
-  const Filter<PointT> filter1(pcd_cloud, voxel_sizes1, min_points_per_voxel_);
-  const auto edge1 = ExtractEdge(filter1, pcd_cloud, 5.0, 0.2);
-  const auto surface1 = ExtractSurface(filter1, pcd_cloud, 0.1, 1.0);
+  const Filter<PointT> filter(pcd_cloud, voxel_sizes, min_points_per_voxel_);
+  const auto edge = ExtractEdge(filter, pcd_cloud, 5.0, 0.2);
+  const auto surface = ExtractSurface(filter, pcd_cloud, 0.1, 1.0);
 
-  const Eigen::Vector3d voxel_sizes2(0.5, 0.5, 0.5);
-  const Filter<PointT> filter2(pcd_cloud, voxel_sizes2, min_points_per_voxel_);
-  const auto edge2 = ExtractEdge(filter2, edge1, 5.0, 0.1);
-  const auto surface2 = ExtractSurface(filter2, surface1, 0.1, 1.0);
-
-  // std::cout << "edge1->size() == " << edge1->size() << std::endl;
-  // std::cout << "surface1->size() == " << surface1->size() << std::endl;
-  pcl::io::savePCDFile<PointT>(std::string{"edge.pcd"}, *edge1, true);
-  pcl::io::savePCDFile<PointT>(std::string{"surface.pcd"}, *surface1, true);
+  // std::cout << "edge->size() == " << edge->size() << std::endl;
+  // std::cout << "surface->size() == " << surface->size() << std::endl;
+  pcl::io::savePCDFile<PointT>(std::string{"edge.pcd"}, *edge, true);
+  pcl::io::savePCDFile<PointT>(std::string{"surface.pcd"}, *surface, true);
 
   return 0;
 }

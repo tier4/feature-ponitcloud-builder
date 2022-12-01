@@ -78,8 +78,8 @@ bool has_surface(
   const Eigen::Vector3d & eigenvalues,
   const double eigenvalue_ratio) {
   return
-    eigenvalues(0) < eigenvalues(2) * eigenvalue_ratio &&
-    eigenvalues(0) < eigenvalues(1) * eigenvalue_ratio;
+    eigenvalues(0) * eigenvalue_ratio < eigenvalues(2) &&
+    eigenvalues(0) * eigenvalue_ratio < eigenvalues(1);
 }
 
 inline double mahalanobis(
@@ -191,8 +191,8 @@ int main(int argc, char * argv[]) {
   const Eigen::Vector3d voxel_sizes(0.3, 0.3, 0.3);
 
   const Filter<PointT> filter(pcd_cloud, voxel_sizes, min_points_per_voxel_);
-  const auto edge = ExtractEdge(filter, pcd_cloud, 5.0, 0.2);
-  const auto surface = ExtractSurface(filter, pcd_cloud, 0.1, 1.0);
+  const auto edge = ExtractEdge(filter, pcd_cloud, 7.0, 0.01);
+  const auto surface = ExtractSurface(filter, pcd_cloud, 10.0, 1.0);
 
   // std::cout << "edge->size() == " << edge->size() << std::endl;
   // std::cout << "surface->size() == " << surface->size() << std::endl;
